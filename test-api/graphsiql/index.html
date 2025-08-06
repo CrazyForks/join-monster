@@ -1,71 +1,71 @@
 <!--
- *  Copyright (c) 2021 GraphQL Contributors
+ *  Copyright (c) 2025 GraphQL Contributors
  *  All rights reserved.
  *
  *  This source code is licensed under the license found in the
  *  LICENSE file in the root directory of this source tree.
- *  https://github.com/graphql/graphiql/tree/main/examples/graphiql-cdn
 -->
-
 <!doctype html>
 <html lang="en">
 
 <head>
-  <title>GraphiQL</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GraphiQL 5 with React 19 and GraphiQL Explorer</title>
   <style>
     body {
-      height: 100%;
       margin: 0;
-      width: 100%;
-      overflow: hidden;
     }
 
     #graphiql {
-      height: 100vh;
+      height: 100dvh;
+    }
+
+    .loading {
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 4rem;
     }
   </style>
+  <link rel="stylesheet" href="https://esm.sh/graphiql/dist/style.css" />
+  <link rel="stylesheet" href="https://esm.sh/@graphiql/plugin-explorer/dist/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@highlightjs/cdn-assets@11.11.1/styles/default.min.css">
+  <script src="https://unpkg.com/@highlightjs/cdn-assets@11.11.1/highlight.min.js"></script>
   <!--
-      This GraphiQL example depends on Promise and fetch, which are available in
-      modern browsers, but can be "polyfilled" for older browsers.
-      GraphiQL itself depends on React DOM.
-      If you do not want to rely on a CDN, you can host these files locally or
-      include them directly in your favored resource bundler.
+     * Note:
+     * The ?standalone flag bundles the module along with all of its `dependencies`, excluding `peerDependencies`, into a single JavaScript file.
+     * `@emotion/is-prop-valid` is a shim to remove the console error ` module "@emotion /is-prop-valid" not found`. Upstream issue: https://github.com/motiondivision/motion/issues/3126
     -->
-  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-  <!--
-      These two files can be found in the npm module, however you may wish to
-      copy them directly into your environment, or perhaps include them in your
-      favored resource bundler.
-     -->
-  <script src="https://unpkg.com/graphiql/graphiql.min.js" type="application/javascript"></script>
-  <link rel="stylesheet" href="https://unpkg.com/graphiql/graphiql.min.css" />
-  <!-- 
-      These are imports for the GraphIQL Explorer plugin.
-     -->
-  <script src="https://unpkg.com/@graphiql/plugin-explorer/dist/index.umd.js" crossorigin></script>
+  <script type="importmap">
+      {
+        "imports": {
+          "react": "https://esm.sh/react@19.1.0",
+          "react/": "https://esm.sh/react@19.1.0/",
 
-  <link rel="stylesheet" href="https://unpkg.com/@graphiql/plugin-explorer/dist/style.css" />
+          "react-dom": "https://esm.sh/react-dom@19.1.0",
+          "react-dom/": "https://esm.sh/react-dom@19.1.0/",
 
-  <!-- begin highlightjs section -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-  <style>
-    .hljs-string {
-      color: hsl(var(--color-info));
-    }
+          "graphiql": "https://esm.sh/graphiql?standalone&external=react,react-dom,@graphiql/react,graphql",
+          "graphiql/": "https://esm.sh/graphiql/",
+          "@graphiql/plugin-explorer": "https://esm.sh/@graphiql/plugin-explorer?standalone&external=react,@graphiql/react,graphql",
+          "@graphiql/react": "https://esm.sh/@graphiql/react?standalone&external=react,react-dom,graphql,@graphiql/toolkit,@emotion/is-prop-valid",
 
-    .hljs-number {
-      color: hsl(var(--color-success));
-    }
-  </style>
-  <!-- end highlightjs section -->
-</head>
+          "@graphiql/toolkit": "https://esm.sh/@graphiql/toolkit?standalone&external=graphql",
+          "graphql": "https://esm.sh/graphql@16.11.0",
+          "@emotion/is-prop-valid": "data:text/javascript,"
+        }
+      }
+    </script>
+  <script type="module">
+    import React from 'react';
+    import ReactDOM from 'react-dom/client';
+    import { GraphiQL, HISTORY_PLUGIN } from 'graphiql';
+    import { createGraphiQLFetcher } from '@graphiql/toolkit';
+    import { explorerPlugin } from '@graphiql/plugin-explorer';
+    import 'graphiql/setup-workers/esm.sh';
 
-<body>
-  <div id="graphiql">Loading...</div>
-  <script>
-    // We decorate fetch to show the SQL preview in the footer and update the URL with the query
     const fetchDecorator = (fetchFunction) => {
       return function (url, options) {
         return fetchFunction(url, options)
@@ -84,25 +84,33 @@
       };
     }
 
-    const root = ReactDOM.createRoot(document.getElementById('graphiql'));
-    const fetcher = GraphiQL.createFetcher({
+    const fetcher = createGraphiQLFetcher({
       // we reuse same index for grapqhl and graphql-relay
       url: new URL(window.location.pathname, window.location.origin),
       fetch: fetchDecorator(window.fetch),
     });
-    const explorerPlugin = GraphiQLPluginExplorer.explorerPlugin();
+    const plugins = [HISTORY_PLUGIN, explorerPlugin()];
+
+    const container = document.getElementById('graphiql');
+    const root = ReactDOM.createRoot(container);
     root.render(
-        React.createElement(GraphiQL, {
-          fetcher,
-          defaultEditorToolsVisibility: true,
-          plugins: [explorerPlugin],
-          query: decodeURIComponent(new URLSearchParams(window.location.search).get('query') ?? ''),
-        },
+      React.createElement(GraphiQL, {
+        fetcher,
+        defaultEditorToolsVisibility: true,
+        plugins,
+        initialQuery: decodeURIComponent(new URLSearchParams(window.location.search).get('query') ?? ''),
+      },
         // create a footer to show the SQL preview
         React.createElement(GraphiQL.Footer, null, React.createElement('pre', null, React.createElement('code', null, ''))),
       )
     );
   </script>
+</head>
+
+<body>
+  <div id="graphiql">
+    <div class="loading">Loading…</div>
+  </div>
 </body>
 
 </html>
